@@ -47,7 +47,7 @@ module.exports = function(app, passport) {
              }
              req.logIn(user, function(err) {
                 if (err) { return next(err); }
-                console.log('kurde');
+
                 return res.json(user)
              });
           })(req, res, next);
@@ -55,7 +55,6 @@ module.exports = function(app, passport) {
 
         // GET USERS ==============================
        app.route('/users').get(function (req, res) {
-          console.log(58, res);
           User.find(function (err, users) {
              if (err)
                 res.send(err);
@@ -78,6 +77,9 @@ module.exports = function(app, passport) {
 
 
 
+
+
+
 // =============================================================================
 // AUTHORIZE (ALREADY LOGGED IN / CONNECTING OTHER SOCIAL ACCOUNT) =============
 // =============================================================================
@@ -92,42 +94,6 @@ module.exports = function(app, passport) {
             failureFlash : true // allow flash messages
         }));
 
-    // facebook -------------------------------
-
-        // send to facebook to do the authentication
-        app.get('/connect/facebook', passport.authorize('facebook', { scope : 'email' }));
-
-        // handle the callback after facebook has authorized the user
-        app.get('/connect/facebook/callback',
-            passport.authorize('facebook', {
-                successRedirect : '/profile',
-                failureRedirect : '/'
-            }));
-
-    // twitter --------------------------------
-
-        // send to twitter to do the authentication
-        app.get('/connect/twitter', passport.authorize('twitter', { scope : 'email' }));
-
-        // handle the callback after twitter has authorized the user
-        app.get('/connect/twitter/callback',
-            passport.authorize('twitter', {
-                successRedirect : '/profile',
-                failureRedirect : '/'
-            }));
-
-
-    // google ---------------------------------
-
-        // send to google to do the authentication
-        app.get('/connect/google', passport.authorize('google', { scope : ['profile', 'email'] }));
-
-        // the callback after google has authorized the user
-        app.get('/connect/google/callback',
-            passport.authorize('google', {
-                successRedirect : '/profile',
-                failureRedirect : '/'
-            }));
 
 // =============================================================================
 // UNLINK ACCOUNTS =============================================================
