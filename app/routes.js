@@ -10,9 +10,15 @@ module.exports = function(app, passport) {
 
     // PROFILE SECTION =========================
     app.get('/profile', isLoggedIn, function(req, res) {
-        res.render('profile.ejs', {
-            user : req.user
-        });
+
+       User.find(function (err, users) {
+          if (err) {
+             res.send(err);
+          }
+          const reqEmail = req.user.local.email;
+          const user = users.find(u=> u.local.email === reqEmail)
+          res.json(user);
+       });
     });
 
     // LOGOUT ==============================
@@ -32,13 +38,6 @@ module.exports = function(app, passport) {
             res.render('login.ejs', { message: req.flash('loginMessage') });
         });
 
-        // process the login form
-        // app.post('/login', passport.authenticate('local-login', {
-        //     successRedirect : '/profile', // redirect to the secure profile section
-        //     failureRedirect : '/login', // redirect back to the signup page if there is an error
-        //     failureFlash : true // allow flash messages
-        // }));
-
        app.post('/login', function(req, res, next) {
           passport.authenticate('local-login', function(err, user, info) {
              if (err) { return next(err); }
@@ -53,14 +52,22 @@ module.exports = function(app, passport) {
           })(req, res, next);
        });
 
+
+
         // GET USERS ==============================
-       app.route('/users').get(function (req, res) {
-          User.find(function (err, users) {
-             if (err)
-                res.send(err);
-             res.json(users);
+
+         app.get('/users', isLoggedIn, function (req, res) {
+             User.find(function (err, users) {
+                if (err)
+                   res.send(err);
+                res.json(users);
+             });
           });
-       });
+
+         app.get('/kurde', isLoggedIn, function(req, res) {
+            res.json({bang: 'kurde'})
+         })
+
 
         // SIGNUP =================================
         // show the signup form
@@ -74,9 +81,6 @@ module.exports = function(app, passport) {
             failureRedirect : '/signup', // redirect back to the signup page if there is an error
             failureFlash : true // allow flash messages
         }));
-
-
-
 
 
 
