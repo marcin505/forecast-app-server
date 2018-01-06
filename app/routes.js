@@ -1,4 +1,6 @@
 var User = require('./models/user');
+var Bear = require('./models/bear')
+
 module.exports = function(app, passport) {
 
 // normal routes ===============================================================
@@ -116,12 +118,42 @@ module.exports = function(app, passport) {
         });
     });
 
+
+
+   app.post('/bear', isLoggedIn, function(req, res) {
+
+      var bear = new Bear();      // create a new instance of the Bear model
+      bear.name = req.body.name;  // set the bears name (comes from the request)
+
+      // save the bear and check for errors
+      bear.save(function(err) {
+         if (err)
+            res.send(err);
+
+         res.json({ message: 'Bear created!' });
+      });
+   });
+
+   app.get('/bear', isLoggedIn, function(req, res) {
+      Bear.find(function(err, bears) {
+         if (err)
+            res.send(err);
+         res.json(bears);
+      });
+   });
+
+   app.get('/bear/:bear_id', isLoggedIn, function(req, res) {
+      Bear.findById(req.params.bear_id, function(err, bear) {
+         if (err)
+            res.send(err);
+         res.json(bear);
+      });
+   });
 };
 
 // route middleware to ensure user is logged in
 function isLoggedIn(req, res, next) {
     if (req.isAuthenticated())
         return next();
-
     res.redirect('/');
 }
