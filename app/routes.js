@@ -1,5 +1,6 @@
 var User = require('./models/user');
-var Bear = require('./models/bear')
+var Bear = require('./models/bear');
+var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 
 module.exports = function(app, passport) {
 
@@ -11,22 +12,42 @@ module.exports = function(app, passport) {
     });
 
     // PROFILE SECTION =========================
-    app.get('/profile', isLoggedIn, function(req, res) {
-
+    app.get('/profile', isLoggedIn, function(req, res, next) {
        User.find(function (err, users) {
           if (err) {
              res.send(err);
           }
-          const reqEmail = req.user.local.email;
-          const user = users.find(u=> u.local.email === reqEmail)
-          res.json(user);
+          var token = req.body.token || req.query.token || req.headers['x-access-token'];
+          console.log('token: ', token);
+
+          if (token) {
+             jwt.verify(token, app.get('superSecret'), function(err, decoded) {
+                if (err) {
+                   return res.json({ success: false, message: 'Failed to authenticate token.' });
+                } else {
+                   // if everything is good, save to request for use in other routes
+                   req.decoded = decoded;
+                   const reqEmail = req.user.local.email;
+                   const user = users.find(u=> u.local.email === reqEmail)
+                   res.json(user);
+                   next();
+                }
+             });
+          } else {
+             // if there is no token
+             // return an error
+             return res.status(403).send({
+                success: false,
+                message: 'No token provided.'
+             });
+          }
        });
     });
 
     // LOGOUT ==============================
     app.get('/logout', function(req, res) {
         req.logout();
-        res.redirect('/');
+        res.json({logout: true});
     });
 
 // =============================================================================
@@ -49,12 +70,21 @@ module.exports = function(app, passport) {
              req.logIn(user, function(err) {
                 if (err) { return next(err); }
 
-                return res.json(user)
+                const payload = {
+                   admin: true,
+                }
+                var token = jwt.sign(
+                   payload, app.get('superSecret'),
+                   {expiresIn : 60*60*24}
+                );
+                return res.json({
+                   user,
+                   message: 'Enjoy your token!',
+                   token: token
+                })
              });
           })(req, res, next);
        });
-
-
 
         // GET USERS ==============================
 
@@ -90,15 +120,15 @@ module.exports = function(app, passport) {
 // AUTHORIZE (ALREADY LOGGED IN / CONNECTING OTHER SOCIAL ACCOUNT) =============
 // =============================================================================
 
-    // locally --------------------------------
-        app.get('/connect/local', function(req, res) {
-            res.render('connect-local.ejs', { message: req.flash('loginMessage') });
-        });
-        app.post('/connect/local', passport.authenticate('local-signup', {
-            successRedirect : '/profile', // redirect to the secure profile section
-            failureRedirect : '/connect/local', // redirect back to the signup page if there is an error
-            failureFlash : true // allow flash messages
-        }));
+    // // locally --------------------------------
+    //     app.get('/connect/local', function(req, res) {
+    //         res.render('connect-local.ejs', { message: req.flash('loginMessage') });
+    //     });
+    //     app.post('/connect/local', passport.authenticate('local-signup', {
+    //         successRedirect : '/profile', // redirect to the secure profile section
+    //         failureRedirect : '/connect/local', // redirect back to the signup page if there is an error
+    //         failureFlash : true // allow flash messages
+    //     }));
 
 
 // =============================================================================
@@ -132,6 +162,7 @@ module.exports = function(app, passport) {
 
          res.json({ message: 'Bear created!' });
       });
+
    });
 
    app.get('/bear', isLoggedIn, function(req, res) {
@@ -155,5 +186,5 @@ module.exports = function(app, passport) {
 function isLoggedIn(req, res, next) {
     if (req.isAuthenticated())
         return next();
-    res.redirect('/');
+      res.send(401,{ success : false, message : 'you need to be logged in' });
 }
