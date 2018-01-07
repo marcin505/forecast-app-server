@@ -17,30 +17,11 @@ module.exports = function(app, passport) {
           if (err) {
              res.send(err);
           }
-          var token = req.body.token || req.query.token || req.headers['x-access-token'];
-          console.log('token: ', token);
-
-          if (token) {
-             jwt.verify(token, app.get('superSecret'), function(err, decoded) {
-                if (err) {
-                   return res.json({ success: false, message: 'Failed to authenticate token.' });
-                } else {
-                   // if everything is good, save to request for use in other routes
-                   req.decoded = decoded;
-                   const reqEmail = req.user.local.email;
-                   const user = users.find(u=> u.local.email === reqEmail)
-                   res.json(user);
-                   next();
-                }
-             });
-          } else {
-             // if there is no token
-             // return an error
-             return res.status(403).send({
-                success: false,
-                message: 'No token provided.'
-             });
-          }
+          const reqEmail = req.user.local.email;
+          const user = users.find(u=> (
+             u.local.email === reqEmail)
+          )
+          tokenAuthentication(app, req, res, next, user);
        });
     });
 
@@ -62,7 +43,7 @@ module.exports = function(app, passport) {
         });
 
        app.post('/login', function(req, res, next) {
-          passport.authenticate('local-login', function(err, user, info) {
+          passport.authenticate('local-login', function(err, user) {
              if (err) { return next(err); }
              if (!user) {
                 return res.send(401,{ success : false, message : 'authentication failed' });
@@ -70,15 +51,13 @@ module.exports = function(app, passport) {
              req.logIn(user, function(err) {
                 if (err) { return next(err); }
 
-                const payload = {
-                   admin: true,
-                }
+                const payload = {admin: true};
                 var token = jwt.sign(
-                   payload, app.get('superSecret'),
-                   {expiresIn : 60*60*24}
+                   payload, app.get('secret'),
+                   {expiresIn : '1m'}
                 );
                 return res.json({
-                   user,
+                   user: user,
                    message: 'Enjoy your token!',
                    token: token
                 })
@@ -117,21 +96,6 @@ module.exports = function(app, passport) {
 
 
 // =============================================================================
-// AUTHORIZE (ALREADY LOGGED IN / CONNECTING OTHER SOCIAL ACCOUNT) =============
-// =============================================================================
-
-    // // locally --------------------------------
-    //     app.get('/connect/local', function(req, res) {
-    //         res.render('connect-local.ejs', { message: req.flash('loginMessage') });
-    //     });
-    //     app.post('/connect/local', passport.authenticate('local-signup', {
-    //         successRedirect : '/profile', // redirect to the secure profile section
-    //         failureRedirect : '/connect/local', // redirect back to the signup page if there is an error
-    //         failureFlash : true // allow flash messages
-    //     }));
-
-
-// =============================================================================
 // UNLINK ACCOUNTS =============================================================
 // =============================================================================
 // used to unlink accounts. for social accounts, just remove the token
@@ -165,11 +129,11 @@ module.exports = function(app, passport) {
 
    });
 
-   app.get('/bear', isLoggedIn, function(req, res) {
+   app.get('/bear', isLoggedIn, function(req, res, next) {
       Bear.find(function(err, bears) {
          if (err)
             res.send(err);
-         res.json(bears);
+         tokenAuthentication(app, req, res, next, bears);
       });
    });
 
@@ -181,6 +145,28 @@ module.exports = function(app, passport) {
       });
    });
 };
+
+const tokenAuthentication = (app, req, res, next, response) => {
+   const token = req.body.token || req.query.token || req.headers['x-access-token'];
+   if (token) {
+      jwt.verify(token, app.get('secret'), function(err, decoded) {
+         if (err) {
+            return res.json(401, { success: false, message: 'Failed to authenticate token.' });
+         } else {
+            // if everything is good, save to request for use in other routes
+            req.decoded = decoded;
+            res.json(response);
+            next();
+         }
+      });
+   } else {
+      return res.status(403).send({
+         success: false,
+         message: 'No token provided.'
+      });
+   }
+
+}
 
 // route middleware to ensure user is logged in
 function isLoggedIn(req, res, next) {

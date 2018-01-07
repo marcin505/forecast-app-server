@@ -7,7 +7,6 @@ var app      = express();
 var apiRoutes = express.Router();
 var port     = process.env.PORT || 8080;
 var mongoose = require('mongoose');
-var morgan      = require('morgan');
 var passport = require('passport');
 var flash    = require('connect-flash');
 var morgan       = require('morgan');
@@ -19,7 +18,7 @@ var configDB = require('./config/database.js');
 
 // configuration ===============================================================
 mongoose.connect(configDB.url); // connect to our database
-app.set('superSecret', configDB.secret);
+app.set('secret', configDB.secret);
 require('./config/passport')(passport); // pass passport for configuration
 
 
@@ -37,7 +36,7 @@ app.set('view engine', 'ejs'); // set up ejs for templating
 app.use(session({
    secret: 'spoko', // session secret
    resave: true,
-   saveUninitialized: true,
+   saveUninitialized: true
 }));
 
 app.use(function (req, res, next) {
