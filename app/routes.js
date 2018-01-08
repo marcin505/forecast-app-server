@@ -21,6 +21,8 @@ module.exports = function(app, passport) {
           const user = users.find(u=> (
              u.local.email === reqEmail)
           )
+
+          // res.json(user);
           tokenAuthentication(app, req, res, next, user);
        });
     });
@@ -86,13 +88,23 @@ module.exports = function(app, passport) {
             res.render('signup.ejs', { message: req.flash('signupMessage') });
         });
 
+
         // process the signup form
-        app.post('/signup', passport.authenticate('local-signup', {
+        app.post('/old_signup', passport.authenticate('local-signup', {
             successRedirect : '/profile', // redirect to the secure profile section
             failureRedirect : '/signup', // redirect back to the signup page if there is an error
             failureFlash : true // allow flash messages
         }));
 
+
+      app.post('/signup', function(req, res, next) {
+         passport.authenticate('local-signup', function(err, user) {
+            if (err) { return next(err); }
+            return res.json({
+               message: 'User created!'
+            })
+      })(req, res, next);
+   });
 
 
 // =============================================================================
