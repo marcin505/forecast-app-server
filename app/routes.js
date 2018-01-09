@@ -13,19 +13,20 @@ module.exports = function(app, passport) {
 
     // PROFILE SECTION =========================
     app.get('/profile', isLoggedIn, function(req, res, next) {
-       User.find(function (err, users) {
-          if (err) {
-             res.send(err);
-          }
-          const reqEmail = req.user.local.email;
-          const user = users.find(u=> (
-             u.local.email === reqEmail)
-          )
-
-          // res.json(user);
+        findUser(req.user).then(user => {
           tokenAuthentication(app, req, res, next, user);
-       });
+       })
+       .catch((err) => {
+            res.send(err);
+        });
     });
+
+    // app.get('/profile', isLoggedIn, function(req, res) {
+    //     res.render('profile.ejs', {
+    //         user : req.user
+    //     });
+    // });
+
 
     // LOGOUT ==============================
     app.get('/logout', function(req, res) {
@@ -56,7 +57,7 @@ module.exports = function(app, passport) {
                 const payload = {admin: true};
                 var token = jwt.sign(
                    payload, app.get('secret'),
-                   {expiresIn : '1m'}
+                   {expiresIn : '10m'}
                 );
                 return res.json({
                    user: user,
@@ -77,33 +78,28 @@ module.exports = function(app, passport) {
              });
           });
 
-         app.get('/kurde', isLoggedIn, function(req, res) {
-            res.json({bang: 'kurde'})
-         })
-
-
         // SIGNUP =================================
         // show the signup form
         app.get('/signup', function(req, res) {
             res.render('signup.ejs', { message: req.flash('signupMessage') });
         });
 
-
         // process the signup form
-        app.post('/old_signup', passport.authenticate('local-signup', {
+        app.post('/bang', passport.authenticate('local-signup', {
             successRedirect : '/profile', // redirect to the secure profile section
             failureRedirect : '/signup', // redirect back to the signup page if there is an error
             failureFlash : true // allow flash messages
         }));
 
-
-      app.post('/signup', function(req, res, next) {
-         passport.authenticate('local-signup', function(err, user) {
-            if (err) { return next(err); }
-            return res.json({
-               message: 'User created!'
-            })
-      })(req, res, next);
+        app.post('/signup', function(req, res, next) {
+            passport.authenticate('local-signup', function(err, user) {
+                if (err) { return next(err); }
+                if (user) {
+                   return res.send(200,{ success : true, message : 'user created!' });
+                } else {
+                   return res.send(401,{ success : false, message : 'user already exists!' });
+                }
+        })(req, res, next);
    });
 
 
@@ -177,12 +173,26 @@ const tokenAuthentication = (app, req, res, next, response) => {
          message: 'No token provided.'
       });
    }
-
 }
 
 // route middleware to ensure user is logged in
-function isLoggedIn(req, res, next) {
+const isLoggedIn = (req, res, next) => {
     if (req.isAuthenticated())
         return next();
       res.send(401,{ success : false, message : 'you need to be logged in' });
 }
+
+const findUser = userToFind => (
+    new Promise((resolve, reject) => {
+        User.find((err, users) => {
+            if (err) {
+                reject(err);
+            }
+            const reqEmail = userToFind.local.email;
+            const user = users.find(u=> (
+                u.local.email === reqEmail
+            ))
+            resolve(user) ;
+        });
+    })
+);
