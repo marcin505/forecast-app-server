@@ -14,7 +14,9 @@ module.exports = function(app, passport) {
     // PROFILE SECTION =========================
     app.get('/profile', isLoggedIn, function(req, res, next) {
         findUser(req.user).then(user => {
-          tokenAuthentication(app, req, res, next, user);
+
+            const responseJSON = {_id:user._id, email:user.local.email};            
+            tokenAuthentication(app, req, res, next, responseJSON);
        })
        .catch((err) => {
             res.send(err);
@@ -57,12 +59,13 @@ module.exports = function(app, passport) {
                 const payload = {admin: true};
                 var token = jwt.sign(
                    payload, app.get('secret'),
-                   {expiresIn : '10m'}
+                   {expiresIn : '2m'}
                 );
+                console.log(62, user);
                 return res.json({
-                   user: user,
-                   message: 'Enjoy your token!',
-                   token: token
+                   _id: user._id, 
+                   email : user.local.email,
+                   token,
                 })
              });
           })(req, res, next);
