@@ -15,7 +15,7 @@ module.exports = function(app, passport) {
     app.get('/profile', isLoggedIn, function(req, res, next) {
         findUser(req.user).then(user => {
 
-            const responseJSON = {_id:user._id, email:user.local.email};            
+            const responseJSON = {_id:user._id, email:user.local.email};
             tokenAuthentication(app, req, res, next, responseJSON);
        })
        .catch((err) => {
@@ -59,7 +59,7 @@ module.exports = function(app, passport) {
                 const payload = {admin: true};
                 var token = jwt.sign(
                    payload, app.get('secret'),
-                   {expiresIn : '2m'}
+                   {expiresIn : '10m'}
                 );
                 console.log(62, user);
                 return res.json({
@@ -159,6 +159,7 @@ module.exports = function(app, passport) {
 
 const tokenAuthentication = (app, req, res, next, response) => {
    const token = req.body.token || req.query.token || req.headers['x-access-token'];
+
    if (token) {
       jwt.verify(token, app.get('secret'), function(err, decoded) {
          if (err) {
